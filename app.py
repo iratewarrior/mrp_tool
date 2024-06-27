@@ -81,7 +81,7 @@ for product in df_specs['Продукт'].unique():
 
 # Агрегация остатков комплектующих с учетом аналогов
 aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks)
-df_specs['Aggregated Stock'] = df_specs['ЕР-код'].map(aggregated_stocks)
+df_specs['Aggregated Stock'] = df_specs['ЕР-код'].map(aggregated_stocks).round(2)
 
 # Расчет минимальной возможности производства на основе текущих остатков
 production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks)
@@ -93,19 +93,37 @@ def style_dataframe(df):
         dict(selector="tr:nth-child(odd)", props=[("background-color", "#ffffff")])
     ]
     df_styled = df.style.set_table_styles(styles)
-    df_styled = df_styled.applymap(lambda x: 'color: red;' if x == 0 else '')
+    df_styled = df_styled.applymap(lambda x: 'color: red;' if x == 0 else '').format(precision=2)
     return df_styled
 
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
-styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество'])
-st.dataframe(style_dataframe(styled_capacity_df), use_container_width=True)
+styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2)
+st.dataframe(styled_capacity_df.style.hide_index().set_table_styles([{
+        'selector': 'thead th',
+        'props': [('background-color', '#007bff'), ('color', 'white')]
+    }, {
+        'selector': 'tbody tr:nth-child(even)',
+        'props': [('background-color', '#f2f2f2')]
+    }, {
+        'selector': 'tbody tr:nth-child(odd)',
+        'props': [('background-color', '#ffffff')]
+    }]).applymap(lambda x: 'color: red;' if x == 0 else ''), use_container_width=True)
 
 # Выбор продукта для отображения агрегированных остатков в боковой панели
 selected_product = st.sidebar.selectbox('Выберите продукт для просмотра остатков комплектующих', df_specs['Продукт'].unique())
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
-st.dataframe(style_dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']]), use_container_width=True)
+st.dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']].round(2).style.hide_index().set_table_styles([{
+        'selector': 'thead th',
+        'props': [('background-color', '#007bff'), ('color', 'white')]
+    }, {
+        'selector': 'tbody tr:nth-child(even)',
+        'props': [('background-color', '#f2f2f2')]
+    }, {
+        'selector': 'tbody tr:nth-child(odd)',
+        'props': [('background-color', '#ffffff')]
+    }]).applymap(lambda x: 'color: red;' if x == 0 else ''), use_container_width=True)
 
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
 if any(target_qty.values()):
@@ -113,8 +131,17 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0]
-    st.dataframe(style_dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']]), use_container_width=True)
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0].round(2)
+    st.dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']].style.hide_index().set_table_styles([{
+            'selector': 'thead th',
+            'props': [('background-color', '#007bff'), ('color', 'white')]
+        }, {
+            'selector': 'tbody tr:nth-child(even)',
+            'props': [('background-color', '#f2f2f2')]
+        }, {
+            'selector': 'tbody tr:nth-child(odd)',
+            'props': [('background-color', '#ffffff')]
+        }]).applymap(lambda x: 'color: red;' if x == 0 else ''), use_container_width=True)
 
 # Дополнительная стилизация с использованием CSS
 st.markdown("""
