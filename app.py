@@ -96,9 +96,10 @@ def style_dataframe(df):
     df_styled = df_styled.applymap(lambda x: 'color: red;' if x == 0 else '').format(precision=2)
     return df_styled
 
+# Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
 styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2)
-st.dataframe(styled_capacity_df.style.hide_index().set_table_styles([{
+st.dataframe(styled_capacity_df.style.set_table_styles([{
         'selector': 'thead th',
         'props': [('background-color', '#007bff'), ('color', 'white')]
     }, {
@@ -114,7 +115,7 @@ selected_product = st.sidebar.selectbox('Выберите продукт для 
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
-st.dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']].round(2).style.hide_index().set_table_styles([{
+st.dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']].round(2).style.set_table_styles([{
         'selector': 'thead th',
         'props': [('background-color', '#007bff'), ('color', 'white')]
     }, {
@@ -132,7 +133,7 @@ if any(target_qty.values()):
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
     additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0].round(2)
-    st.dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']].style.hide_index().set_table_styles([{
+    st.dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']].style.set_table_styles([{
             'selector': 'thead th',
             'props': [('background-color', '#007bff'), ('color', 'white')]
         }, {
@@ -153,52 +154,41 @@ st.markdown("""
     }
 
     /* Стиль боковой панели */
-    .stSidebar {
+    .sidebar .sidebar-content {
         background-color: #ffffff;
         border-right: 1px solid #e0e0e0;
     }
 
-    .stSidebar h1, .stSidebar h2, .stSidebar h3, .stSidebar h4, .stSidebar h5, .stSidebar h6 {
+    .sidebar .sidebar-content h1, .sidebar .sidebar-content h2, .sidebar .sidebar-content h3, .sidebar .sidebar-content h4, .sidebar .sidebar-content h5, .sidebar .sidebar-content h6 {
         color: #007bff;
     }
 
     /* Стиль заголовков */
-    .stTitle {
+    .css-10trblm {
         color: #007bff;
         font-weight: bold;
     }
 
-    .stSubheader {
-        color: #495057;
-        font-weight: bold;
+    .css-1v3fvcr h2 {
+        color: #007bff;
     }
 
     /* Стиль таблиц */
-    .stDataFrame {
-        border: 1px solid #dee2e6;
-        border-radius: 0.25rem;
-        padding: 0.5rem;
-        background-color: #ffffff;
+    .css-1l269bu th {
+        background-color: #007bff !important;
+        color: white !important;
     }
 
-    .stDataFrame th {
-        background-color: #007bff;
-        color: #ffffff;
+    .css-1l269bu tr:nth-child(even) {
+        background-color: #f2f2f2 !important;
     }
 
-    .stDataFrame td {
-        border-bottom: 1px solid #dee2e6;
+    .css-1l269bu tr:nth-child(odd) {
+        background-color: #ffffff !important;
     }
 
-    /* Адаптивный стиль */
-    @media (max-width: 768px) {
-        .stSidebar {
-            display: none;
-        }
-        
-        .stTitle, .stSubheader {
-            text-align: center;
-        }
+    .css-1l269bu td {
+        border-bottom: 1px solid #dee2e6 !important;
     }
     </style>
     """, unsafe_allow_html=True)
