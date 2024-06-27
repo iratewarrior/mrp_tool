@@ -12,9 +12,9 @@ def find_analogs(er_code, df_analogs):
 # Функция для подсчета суммарного остатка по каждому ЕР-коду и его аналогам
 def calculate_aggregated_stock(df_specs, df_analogs, df_stocks):
     aggregated_stocks = {}
-    for er_code in df_specs['ЕР-код']:
+    for er_code in df_specs['Код']:
         all_codes = [er_code] + find_analogs(er_code, df_analogs)
-        total_stock = df_stocks[df_stocks['ЕР-код'].isin(all_codes)]['Свободный остаток'].sum()
+        total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
         aggregated_stocks[er_code] = total_stock
     return aggregated_stocks
 
@@ -25,8 +25,8 @@ def calculate_production_capacity(df_specs, df_analogs, df_stocks):
         product_specs = df_specs[df_specs['Продукт'] == product]
         min_capacity = float('inf')
         for _, row in product_specs.iterrows():
-            analogs = find_analogs(row['ЕР-код'], df_analogs)
-            total_stock = df_stocks[df_stocks['ЕР-код'].isin([row['ЕР-код']] + analogs)]['Свободный остаток'].sum()
+            analogs = find_analogs(row['Код'], df_analogs)
+            total_stock = df_stocks[df_stocks['Код'].isin([row['Код']] + analogs)]['В наличии'].sum()
             current_capacity = total_stock // row['Количество на изделие']
             if current_capacity < min_capacity:
                 min_capacity = current_capacity
@@ -42,24 +42,24 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
         product_specs = df_specs[df_specs['Продукт'] == product]
         for _, row in product_specs.iterrows():
             needed = qty * row['Количество на изделие']
-            excess_rate = df_overuse.loc[df_overuse['ЕР-код'] == row['ЕР-код'], 'Коэффициент брака производство']
+            excess_rate = df_overuse.loc[df_overuse['Код'] == row['Код'], 'Коэффициент брака производство']
             needed *= (1 + excess_rate.iloc[0] if not excess_rate.empty else 1)
-            available = aggregated_stocks.get(row['ЕР-код'], 0)
+            available = aggregated_stocks.get(row['Код'], 0)
             additional_required = needed - available
             if additional_required > 0:
-                if row['ЕР-код'] in requirements:
-                    requirements[row['ЕР-код']]['Additional'] += additional_required
+                if row['Код'] in requirements:
+                    requirements[row['Код']]['Дополнительно'] += additional_required
                 else:
-                    requirements[row['ЕР-код']] = {
+                    requirements[row['Код']] = {
                         'Описание': row['Описание'],
-                        'Additional': additional_required
+                        'Дополнительно': additional_required
                     }
     
     if requirements:
-        requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'ЕР-код'})
+        requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'Код'})
         return requirements_df
     else:
-        return pd.DataFrame(columns=['ЕР-код', 'Описание', 'Additional'])
+        return pd.DataFrame(columns=['Код', 'Описание', 'Дополнительно'])
 
 # Загрузка данных
 df_specs = pd.read_excel('00_спецификации.xlsx')
@@ -81,7 +81,7 @@ for product in df_specs['Продукт'].unique():
 
 # Агрегация остатков комплектующих с учетом аналогов
 aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks)
-df_specs['Aggregated Stock'] = df_specs['ЕР-код'].map(aggregated_stocks).round(2)
+df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(2)
 
 # Расчет минимальной возможности производства на основе текущих остатков
 production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks)
@@ -115,7 +115,7 @@ selected_product = st.sidebar.selectbox('Выберите продукт для 
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
-st.dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']].round(2).style.set_table_styles([{
+st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки']].round(2).style.set_table_styles([{
         'selector': 'thead th',
         'props': [('background-color', '#007bff'), ('color', 'white')]
     }, {
@@ -132,8 +132,8 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0].round(2)
-    st.dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']].style.set_table_styles([{
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].round(2)
+    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']].style.set_table_styles([{
             'selector': 'thead th',
             'props': [('background-color', '#007bff'), ('color', 'white')]
         }, {
