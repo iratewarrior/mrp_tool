@@ -88,9 +88,13 @@ production_capacity = calculate_production_capacity(df_specs, df_analogs, df_sto
 
 # Функция для стилизации DataFrame
 def style_dataframe(df):
-    return df.style.applymap(lambda x: 'color: red;' if x == 0 else '') \
-                   .applymap(lambda x: 'background-color: #f0f0f0;', subset=pd.IndexSlice[::2]) \
-                   .applymap(lambda x: 'background-color: #ffffff;', subset=pd.IndexSlice[1::2])
+    styles = [
+        dict(selector="tr:nth-child(even)", props=[("background-color", "#f2f2f2")]),
+        dict(selector="tr:nth-child(odd)", props=[("background-color", "#ffffff")])
+    ]
+    df_styled = df.style.set_table_styles(styles)
+    df_styled = df_styled.applymap(lambda x: 'color: red;' if x == 0 else '')
+    return df_styled
 
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
 styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество'])
