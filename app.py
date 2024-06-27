@@ -56,7 +56,7 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
                     }
     
     if requirements:
-        requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'ЕР-код'})
+        requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'ЕР-код'}).round(2)
         return requirements_df
     else:
         return pd.DataFrame(columns=['ЕР-код', 'Описание', 'Additional'])
@@ -98,7 +98,7 @@ def style_dataframe(df):
 
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
-styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2)
+styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).reset_index(drop=True).round(2)
 st.dataframe(styled_capacity_df.style.set_table_styles([{
         'selector': 'thead th',
         'props': [('background-color', '#007bff'), ('color', 'white')]
@@ -112,7 +112,7 @@ st.dataframe(styled_capacity_df.style.set_table_styles([{
 
 # Выбор продукта для отображения агрегированных остатков в боковой панели
 selected_product = st.sidebar.selectbox('Выберите продукт для просмотра остатков комплектующих', df_specs['Продукт'].unique())
-df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
+df_selected_product = df_specs[df_specs['Продукт'] == selected_product].reset_index(drop=True)
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
 st.dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']].round(2).style.set_table_styles([{
@@ -132,7 +132,7 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0].round(2)
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0].reset_index(drop=True).round(2)
     st.dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']].style.set_table_styles([{
             'selector': 'thead th',
             'props': [('background-color', '#007bff'), ('color', 'white')]
