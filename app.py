@@ -55,8 +55,11 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
                         'Additional': additional_required
                     }
     
-    requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'ЕР-код'})
-    return requirements_df
+    if requirements:
+        requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'ЕР-код'})
+        return requirements_df
+    else:
+        return pd.DataFrame(columns=['ЕР-код', 'Описание', 'Additional'])
 
 # Загрузка данных
 df_specs = pd.read_excel('00_спецификации.xlsx')
@@ -83,15 +86,22 @@ df_specs['Aggregated Stock'] = df_specs['ЕР-код'].map(aggregated_stocks)
 # Расчет минимальной возможности производства на основе текущих остатков
 production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks)
 
+# Функция для стилизации DataFrame
+def style_dataframe(df):
+    return df.style.applymap(lambda x: 'color: red;' if x == 0 else '') \
+                   .applymap(lambda x: 'background-color: #f0f0f0;', subset=pd.IndexSlice[::2]) \
+                   .applymap(lambda x: 'background-color: #ffffff;', subset=pd.IndexSlice[1::2])
+
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
-st.dataframe(pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']), use_container_width=True)
+styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество'])
+st.dataframe(style_dataframe(styled_capacity_df), use_container_width=True)
 
 # Выбор продукта для отображения агрегированных остатков в боковой панели
 selected_product = st.sidebar.selectbox('Выберите продукт для просмотра остатков комплектующих', df_specs['Продукт'].unique())
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
-st.dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']], use_container_width=True)
+st.dataframe(style_dataframe(df_selected_product[['ЕР-код', 'Описание', 'Aggregated Stock']]), use_container_width=True)
 
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
 if any(target_qty.values()):
@@ -100,7 +110,7 @@ if any(target_qty.values()):
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
     additional_requirements_df = additional_requirements_df[additional_requirements_df['Additional'] > 0]
-    st.dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']].style.format({"Additional": "{:.2f}"}), use_container_width=True)
+    st.dataframe(style_dataframe(additional_requirements_df[['ЕР-код', 'Описание', 'Additional']]), use_container_width=True)
 
 # Дополнительная стилизация с использованием CSS
 st.markdown("""
