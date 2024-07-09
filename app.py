@@ -9,28 +9,32 @@ def find_analogs(er_code, df_analogs):
     all_codes.discard(er_code)
     return list(all_codes)
 
-# Функция для подсчета суммарного остатка по каждому ЕР-коду и его аналогам
-def calculate_aggregated_stock(df_specs, df_analogs, df_stocks):
+# Функция для подсчета суммарного остатка по каждому коду и его аналогам
+def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[]):
     aggregated_stocks = {}
-    for er_code in df_specs['Код']:
-        all_codes = [er_code] + find_analogs(er_code, df_analogs)
-        total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
-        aggregated_stocks[er_code] = total_stock
+    for code in df_specs['Код']:
+        if code not in excluded_codes:
+            all_codes = [code] + find_analogs(code, df_analogs)
+            total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
+            aggregated_stocks[code] = total_stock
+        else:
+            aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
     return aggregated_stocks
 
 # Функция для расчета минимального количества продукта, которое можно собрать
-def calculate_production_capacity(df_specs, df_analogs, df_stocks):
+def calculate_production_capacity(df_specs, df_analogs, df_stocks, excluded_codes=[]):
     capacity = {}
     for product in df_specs['Продукт'].unique():
         product_specs = df_specs[df_specs['Продукт'] == product]
         min_capacity = float('inf')
         for _, row in product_specs.iterrows():
-            analogs = find_analogs(row['Код'], df_analogs)
-            total_stock = df_stocks[df_stocks['Код'].isin([row['Код']] + analogs)]['В наличии'].sum()
-            current_capacity = total_stock // row['Количество на изделие']
-            if current_capacity < min_capacity:
-                min_capacity = current_capacity
-        capacity[product] = min_capacity
+            if row['Код'] not in excluded_codes:
+                analogs = find_analogs(row['Код'], df_analogs)
+                total_stock = df_stocks[df_stocks['Код'].isin([row['Код']] + analogs)]['В наличии'].sum()
+                current_capacity = total_stock // row['Количество на изделие']
+                if current_capacity < min_capacity:
+                    min_capacity = current_capacity
+        capacity[product] = min_capacity if min_capacity != float('inf') else 0
     return capacity
 
 # Функция для расчета необходимых к дозакупке компонентов
@@ -57,6 +61,7 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
     
     if requirements:
         requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'Код'})
+        requirements_df['Дополнительно'] = requirements_df['Дополнительно'].fillna(0).astype(float).round(0).astype(int)
         return requirements_df
     else:
         return pd.DataFrame(columns=['Код', 'Описание', 'Дополнительно'])
@@ -79,52 +84,43 @@ target_qty = {}
 for product in df_specs['Продукт'].unique():
     target_qty[product] = st.sidebar.number_input(f'Целевое количество "{product}"', min_value=0, key=product)
 
+# Список исключенных компонентов
+if 'excluded_codes' not in st.session_state:
+    st.session_state['excluded_codes'] = []
+
+# Обработка клика на строку в таблице
+def handle_click():
+    selected_codes = st.session_state['selected_codes']
+    st.session_state['excluded_codes'] = selected_codes
+
+# Кнопка для сброса исключенных компонентов
+if st.sidebar.button('Сбросить исключенные компоненты'):
+    st.session_state['excluded_codes'] = []
+
 # Агрегация остатков комплектующих с учетом аналогов
-aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks)
-df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(2)
+aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, st.session_state['excluded_codes'])
+df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(0).astype(int)
+df_specs['Входимость в 1 изделие'] = df_specs['Количество на изделие']
+df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(0).astype(int)
+
+# Фильтр для отображения агрегированных остатков от меньшего к большему
+df_specs_sorted = df_specs.sort_values(by='Агрегированные остатки')
 
 # Расчет минимальной возможности производства на основе текущих остатков
-production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks)
-
-# Функция для стилизации DataFrame
-def style_dataframe(df):
-    styles = [
-        dict(selector="tr:nth-child(even)", props=[("background-color", "#f2f2f2")]),
-        dict(selector="tr:nth-child(odd)", props=[("background-color", "#ffffff")])
-    ]
-    df_styled = df.style.set_table_styles(styles)
-    df_styled = df_styled.applymap(lambda x: 'color: red;' if x == 0 else '').format(precision=2)
-    return df_styled
+production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks, st.session_state['excluded_codes'])
 
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
-styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2)
-st.dataframe(styled_capacity_df.style.set_table_styles([{
-        'selector': 'thead th',
-        'props': [('background-color', '#007bff'), ('color', 'white')]
-    }, {
-        'selector': 'tbody tr:nth-child(even)',
-        'props': [('background-color', '#f2f2f2')]
-    }, {
-        'selector': 'tbody tr:nth-child(odd)',
-        'props': [('background-color', '#ffffff')]
-    }]).applymap(lambda x: 'color: red;' if x == 0 else ''), use_container_width=True)
+styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(0).astype(int)
+st.dataframe(styled_capacity_df, use_container_width=True)
 
 # Выбор продукта для отображения агрегированных остатков в боковой панели
 selected_product = st.sidebar.selectbox('Выберите продукт для просмотра остатков комплектующих', df_specs['Продукт'].unique())
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
-st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки']].round(2).style.set_table_styles([{
-        'selector': 'thead th',
-        'props': [('background-color', '#007bff'), ('color', 'white')]
-    }, {
-        'selector': 'tbody tr:nth-child(even)',
-        'props': [('background-color', '#f2f2f2')]
-    }, {
-        'selector': 'tbody tr:nth-child(odd)',
-        'props': [('background-color', '#ffffff')]
-    }]).applymap(lambda x: 'color: red;' if x == 0 else ''), use_container_width=True)
+selected_codes = st.multiselect('Исключить компоненты:', df_selected_product['Код'], default=st.session_state['excluded_codes'], key='selected_codes', on_change=handle_click)
+st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
 if any(target_qty.values()):
@@ -132,63 +128,5 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].round(2)
-    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']].style.set_table_styles([{
-            'selector': 'thead th',
-            'props': [('background-color', '#007bff'), ('color', 'white')]
-        }, {
-            'selector': 'tbody tr:nth-child(even)',
-            'props': [('background-color', '#f2f2f2')]
-        }, {
-            'selector': 'tbody tr:nth-child(odd)',
-            'props': [('background-color', '#ffffff')]
-        }]).applymap(lambda x: 'color: red;' if x == 0 else ''), use_container_width=True)
-
-# Дополнительная стилизация с использованием CSS
-st.markdown("""
-    <style>
-    /* Общий стиль страницы */
-    body {
-        font-family: 'Arial', sans-serif;
-        background-color: #f7f9fc;
-    }
-
-    /* Стиль боковой панели */
-    .sidebar .sidebar-content {
-        background-color: #ffffff;
-        border-right: 1px solid #e0e0e0;
-    }
-
-    .sidebar .sidebar-content h1, .sidebar .sidebar-content h2, .sidebar .sidebar-content h3, .sidebar .sidebar-content h4, .sidebar .sidebar-content h5, .sidebar .sidebar-content h6 {
-        color: #007bff;
-    }
-
-    /* Стиль заголовков */
-    .css-10trblm {
-        color: #007bff;
-        font-weight: bold;
-    }
-
-    .css-1v3fvcr h2 {
-        color: #007bff;
-    }
-
-    /* Стиль таблиц */
-    .css-1l269bu th {
-        background-color: #007bff !important;
-        color: white !important;
-    }
-
-    .css-1l269bu tr:nth-child(even) {
-        background-color: #f2f2f2 !important;
-    }
-
-    .css-1l269bu tr:nth-child(odd) {
-        background-color: #ffffff !important;
-    }
-
-    .css-1l269bu td {
-        border-bottom: 1px solid #dee2e6 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
+    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
