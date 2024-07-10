@@ -93,8 +93,7 @@ st.sidebar.title('Настройки')
 # Загрузка данных из Excel файла
 df_list, last_modified = load_data('02_остатки_ERP.xlsx')
 
-# Вывод даты последнего обновления файла с остатками
-st.sidebar.markdown(f"**Дата последнего обновления файла с остатками:** {last_modified}")
+st.sidebar.markdown(f"**Дата последнего редактирования файла с остатками:** {last_modified.strftime('%Y-%m-%d %H:%M:%S')}")
 
 # Выбор продукта из выпадающего списка
 selected_product_for_target_qty = st.sidebar.selectbox('Выберите продукт для ввода целевого количества', df_specs['Продукт'].unique())
