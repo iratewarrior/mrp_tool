@@ -9,7 +9,8 @@ def load_data(file_path):
     df_list = {}
     for sheet_name in sheet_names:
         df_list[sheet_name] = pd.read_excel(file_path, sheet_name=sheet_name)
-    return df_list, wb.properties.modified  # Возвращаем словарь DataFrame и дату последнего изменения файла
+    last_modified = wb.properties.modified
+    return df_list, last_modified  # Возвращаем словарь DataFrame и дату последнего изменения файла
 
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
