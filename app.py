@@ -1,19 +1,5 @@
 import pandas as pd
 import streamlit as st
-import requests
-
-# Функция для загрузки данных с учетом метаданных
-def load_data(file_url):
-    df = pd.read_excel(file_url)  # Загружаем данные из Excel
-    response = requests.head(file_url)  # Отправляем HEAD-запрос для получения метаданных
-    last_modified = response.headers['Last-Modified']  # Получаем дату последнего изменения
-    return df, last_modified
-
-# URL вашего файла Excel в GitHub (замените на реальный URL)
-file_url = 'https://github.com/iratewarrior/mrp_tool/blob/main/02_%D0%BE%D1%81%D1%82%D0%B0%D1%82%D0%BA%D0%B8_ERP.xlsx'
-
-# Загрузка данных из Excel файла и получение времени последнего обновления
-df, last_modified = load_data(file_url)
 
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
@@ -92,12 +78,6 @@ st.title('Планирование материальных потребност
 
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
-
-# Преобразование времени последнего изменения для удобства отображения
-last_modified_str = pd.to_datetime(last_modified).strftime('%Y-%m-%d %H:%M:%S')
-
-# Вывод даты последнего редактирования файла с остатками
-st.sidebar.markdown(f"**Дата последнего редактирования файла в GitHub:** {last_modified_str}")
 
 # Выбор продукта из выпадающего списка
 selected_product_for_target_qty = st.sidebar.selectbox('Выберите продукт для ввода целевого количества', df_specs['Продукт'].unique())
