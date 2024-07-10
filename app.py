@@ -112,7 +112,7 @@ production_capacity = calculate_production_capacity(df_specs, df_analogs, df_sto
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
 styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(0).astype(int)
-st.dataframe(styled_capacity_df, use_container_width=True)
+st.dataframe(styled_capacity_df.applymap(lambda x: '{:,.0f}'.format(x).replace(',', '')), use_container_width=True)
 
 # Выбор продукта для отображения агрегированных остатков в боковой панели
 selected_product = st.sidebar.selectbox('Выберите продукт для просмотра остатков комплектующих', df_specs['Продукт'].unique())
@@ -120,6 +120,11 @@ df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
 st.subheader(f'Агрегированные остатки для продукта {selected_product}')
 selected_codes = st.multiselect('Исключить компоненты:', df_selected_product['Код'], default=st.session_state['excluded_codes'], key='selected_codes', on_change=handle_click)
+
+# Применение форматирования только к числовым столбцам
+numeric_columns = ['Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']
+df_selected_product[numeric_columns] = df_selected_product[numeric_columns].applymap(lambda x: '{:,.0f}'.format(x).replace(',', ''))
+
 st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
@@ -129,4 +134,5 @@ if any(target_qty.values()):
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
     additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
+    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ''))
     st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
