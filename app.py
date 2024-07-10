@@ -133,6 +133,6 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'float'})
     additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
     st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
