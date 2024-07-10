@@ -93,14 +93,11 @@ st.title('Планирование материальных потребност
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
 
-# Загрузка данных из Excel файла
-df_list, last_modified = load_data('02_остатки_ERP.xlsx')
-
-# Преобразование времени последнего изменения в удобный формат
-last_modified_str = pd.Timestamp(last_modified, unit='s').strftime('%Y-%m-%d %H:%M:%S')
+# Преобразование времени последнего изменения для удобства отображения
+last_modified_str = pd.to_datetime(last_modified).strftime('%Y-%m-%d %H:%M:%S')
 
 # Вывод даты последнего редактирования файла с остатками
-st.sidebar.markdown(f"**Дата последнего редактирования файла с остатками:** {last_modified_str}")
+st.sidebar.markdown(f"**Дата последнего редактирования файла в GitHub:** {last_modified_str}")
 
 # Выбор продукта из выпадающего списка
 selected_product_for_target_qty = st.sidebar.selectbox('Выберите продукт для ввода целевого количества', df_specs['Продукт'].unique())
