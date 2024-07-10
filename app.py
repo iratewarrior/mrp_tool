@@ -1,5 +1,42 @@
 import pandas as pd
 import streamlit as st
+import requests
+from datetime import datetime
+
+# URL-адреса файлов в репозитории GitHub
+url_specs = 'https://raw.githubusercontent.com/username/repository/branch/00_спецификации.xlsx'
+url_analogs = 'https://raw.githubusercontent.com/username/repository/branch/01_аналоги.xlsx'
+url_stocks = 'https://raw.githubusercontent.com/username/repository/branch/02_остатки_ERP.xlsx'
+url_overuse = 'https://raw.githubusercontent.com/username/repository/branch/03_перерасход.xlsx'
+
+# Функция для загрузки данных из GitHub
+def load_data_from_github(url):
+    return pd.read_excel(url)
+
+# Функция для получения даты последнего обновления файла на GitHub
+def get_last_modified_date(url):
+    response = requests.head(url)
+    last_modified = response.headers.get('Last-Modified')
+    if last_modified:
+        return datetime.strptime(last_modified, '%a, %d %b %Y %H:%M:%S %Z')
+    return None
+
+# Загрузка данных
+df_specs = load_data_from_github(url_specs)
+df_analogs = load_data_from_github(url_analogs).drop_duplicates()
+df_stocks = load_data_from_github(url_stocks)
+df_overuse = load_data_from_github(url_overuse)
+
+# Получение даты последнего обновления файла с остатками
+last_modified_date_stocks = get_last_modified_date(url_stocks)
+
+# Интерфейс пользователя в Streamlit
+st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
+st.title('Планирование материальных потребностей (MRP)')
+
+# Отображение даты последнего обновления файла с остатками
+if last_modified_date_stocks:
+    st.markdown(f"**Дата последнего обновления файла с остатками:** {last_modified_date_stocks.strftime('%Y-%m-%d %H:%M:%S')}")
 
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
