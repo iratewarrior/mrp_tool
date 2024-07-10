@@ -61,7 +61,7 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
     
     if requirements:
         requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'Код'})
-        requirements_df['Дополнительно'] = requirements_df['Дополнительно'].fillna(0).astype(float).round(2).astype(int)
+        requirements_df['Дополнительно'] = requirements_df['Дополнительно'].fillna(0).astype(float).round(2)
         return requirements_df
     else:
         return pd.DataFrame(columns=['Код', 'Описание', 'Дополнительно'])
@@ -99,9 +99,9 @@ if st.sidebar.button('Сбросить исключенные компонент
 
 # Агрегация остатков комплектующих с учетом аналогов
 aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, st.session_state['excluded_codes'])
-df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(2).astype(int)
+df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(2)
 df_specs['Входимость в 1 изделие'] = df_specs['Количество на изделие']
-df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(2).astype(int)
+df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(2)
 
 # Фильтр для отображения агрегированных остатков от меньшего к большему
 df_specs_sorted = df_specs.sort_values(by='Агрегированные остатки')
@@ -111,7 +111,7 @@ production_capacity = calculate_production_capacity(df_specs, df_analogs, df_sto
 
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
-styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2).astype(int)
+styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2)
 st.dataframe(styled_capacity_df.applymap(lambda x: '{:,.0f}'.format(x).replace(',', ' ')), use_container_width=True)
 
 # Выбор продукта для отображения агрегированных остатков в боковой панели
