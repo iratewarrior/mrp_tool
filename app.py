@@ -4,10 +4,10 @@ import requests
 from datetime import datetime
 
 # URL-адреса файлов в репозитории GitHub
-url_specs = 'https://raw.githubusercontent.com/username/repository/branch/00_спецификации.xlsx'
-url_analogs = 'https://raw.githubusercontent.com/username/repository/branch/01_аналоги.xlsx'
-url_stocks = 'https://raw.githubusercontent.com/username/repository/branch/02_остатки_ERP.xlsx'
-url_overuse = 'https://raw.githubusercontent.com/username/repository/branch/03_перерасход.xlsx'
+url_specs = 'https://github.com/iratewarrior/mrp_tool/blob/main/00_%D1%81%D0%BF%D0%B5%D1%86%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D0%B8.xlsx'
+url_analogs = 'https://github.com/iratewarrior/mrp_tool/blob/main/01_%D0%B0%D0%BD%D0%B0%D0%BB%D0%BE%D0%B3%D0%B8.xlsx'
+url_stocks = 'https://github.com/iratewarrior/mrp_tool/blob/main/02_%D0%BE%D1%81%D1%82%D0%B0%D1%82%D0%BA%D0%B8_ERP.xlsx'
+url_overuse = 'https://github.com/iratewarrior/mrp_tool/blob/main/03_%D0%BF%D0%B5%D1%80%D0%B5%D1%80%D0%B0%D1%81%D1%85%D0%BE%D0%B4.xlsx'
 
 # Функция для загрузки данных из GitHub
 def load_data_from_github(url):
