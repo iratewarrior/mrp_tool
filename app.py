@@ -11,16 +11,6 @@ def load_data(file_path):
         df_list[sheet_name] = pd.read_excel(file_path, sheet_name=sheet_name)
     return df_list, wb.properties.modified  # Возвращаем словарь DataFrame и дату последнего изменения файла
 
-# Загрузка данных из Excel файла
-df_list, last_modified = load_data('02_остатки_ERP.xlsx')
-
-# Интерфейс пользователя в Streamlit
-st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
-st.title('Планирование материальных потребностей (MRP)')
-
-# Вывод даты последнего обновления файла с остатками
-st.sidebar.markdown(f"**Дата последнего обновления файла с остатками:** {last_modified}")
-
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
     analogs = df_analogs[(df_analogs['Материал.Код'] == er_code) | 
@@ -98,6 +88,12 @@ st.title('Планирование материальных потребност
 
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
+
+# Загрузка данных из Excel файла
+df_list, last_modified = load_data('02_остатки_ERP.xlsx')
+
+# Вывод даты последнего обновления файла с остатками
+st.sidebar.markdown(f"**Дата последнего обновления файла с остатками:** {last_modified}")
 
 # Выбор продукта из выпадающего списка
 selected_product_for_target_qty = st.sidebar.selectbox('Выберите продукт для ввода целевого количества', df_specs['Продукт'].unique())
