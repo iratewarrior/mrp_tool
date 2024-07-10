@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from openpyxl import load_workbook
+import os
 
 # Функция для загрузки данных с учетом метаданных
 def load_data(file_path):
@@ -9,7 +10,7 @@ def load_data(file_path):
     df_list = {}
     for sheet_name in sheet_names:
         df_list[sheet_name] = pd.read_excel(file_path, sheet_name=sheet_name)
-    last_modified = wb.properties.modified
+    last_modified = os.path.getmtime(file_path)  # Получаем время последнего изменения файла
     return df_list, last_modified  # Возвращаем словарь DataFrame и дату последнего изменения файла
 
 # Функция для нахождения всех аналогов для конкретного кода
@@ -93,7 +94,11 @@ st.sidebar.title('Настройки')
 # Загрузка данных из Excel файла
 df_list, last_modified = load_data('02_остатки_ERP.xlsx')
 
-st.sidebar.markdown(f"**Дата последнего редактирования файла с остатками:** {last_modified.strftime('%Y-%m-%d %H:%M:%S')}")
+# Преобразование времени последнего изменения в удобный формат
+last_modified_str = pd.Timestamp(last_modified, unit='s').strftime('%Y-%m-%d %H:%M:%S')
+
+# Вывод даты последнего редактирования файла с остатками
+st.sidebar.markdown(f"**Дата последнего редактирования файла с остатками:** {last_modified_str}")
 
 # Выбор продукта из выпадающего списка
 selected_product_for_target_qty = st.sidebar.selectbox('Выберите продукт для ввода целевого количества', df_specs['Продукт'].unique())
