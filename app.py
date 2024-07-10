@@ -1,42 +1,25 @@
 import pandas as pd
 import streamlit as st
-import requests
-from datetime import datetime
+from openpyxl import load_workbook
 
-# URL-адреса файлов в репозитории GitHub
-url_specs = 'https://github.com/iratewarrior/mrp_tool/blob/main/00_%D1%81%D0%BF%D0%B5%D1%86%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D0%B8.xlsx'
-url_analogs = 'https://github.com/iratewarrior/mrp_tool/blob/main/01_%D0%B0%D0%BD%D0%B0%D0%BB%D0%BE%D0%B3%D0%B8.xlsx'
-url_stocks = 'https://github.com/iratewarrior/mrp_tool/blob/main/02_%D0%BE%D1%81%D1%82%D0%B0%D1%82%D0%BA%D0%B8_ERP.xlsx'
-url_overuse = 'https://github.com/iratewarrior/mrp_tool/blob/main/03_%D0%BF%D0%B5%D1%80%D0%B5%D1%80%D0%B0%D1%81%D1%85%D0%BE%D0%B4.xlsx'
+# Функция для загрузки данных с учетом метаданных
+def load_data(file_path):
+    wb = load_workbook(file_path, read_only=True, data_only=True)
+    sheet_names = wb.sheetnames  # Получаем список имён листов в Excel файле
+    df_list = {}
+    for sheet_name in sheet_names:
+        df_list[sheet_name] = pd.read_excel(file_path, sheet_name=sheet_name)
+    return df_list, wb.properties.modified  # Возвращаем словарь DataFrame и дату последнего изменения файла
 
-# Функция для загрузки данных из GitHub
-def load_data_from_github(url):
-    return pd.read_excel(url)
-
-# Функция для получения даты последнего обновления файла на GitHub
-def get_last_modified_date(url):
-    response = requests.head(url)
-    last_modified = response.headers.get('Last-Modified')
-    if last_modified:
-        return datetime.strptime(last_modified, '%a, %d %b %Y %H:%M:%S %Z')
-    return None
-
-# Загрузка данных
-df_specs = load_data_from_github(url_specs)
-df_analogs = load_data_from_github(url_analogs).drop_duplicates()
-df_stocks = load_data_from_github(url_stocks)
-df_overuse = load_data_from_github(url_overuse)
-
-# Получение даты последнего обновления файла с остатками
-last_modified_date_stocks = get_last_modified_date(url_stocks)
+# Загрузка данных из Excel файла
+df_list, last_modified = load_data('02_остатки_ERP.xlsx')
 
 # Интерфейс пользователя в Streamlit
 st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
 st.title('Планирование материальных потребностей (MRP)')
 
-# Отображение даты последнего обновления файла с остатками
-if last_modified_date_stocks:
-    st.markdown(f"**Дата последнего обновления файла с остатками:** {last_modified_date_stocks.strftime('%Y-%m-%d %H:%M:%S')}")
+# Вывод даты последнего обновления файла с остатками
+st.sidebar.markdown(f"**Дата последнего обновления файла с остатками:** {last_modified}")
 
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
