@@ -22,7 +22,7 @@ def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[
     return aggregated_stocks
 
 # Функция для расчета минимального количества продукта, которое можно собрать
-def calculate_production_capacity(df_specs, df_analogs, df_stocks, excluded_codes=[]):
+def calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes=[]):
     capacity = {}
     for product in df_specs['Продукт'].unique():
         product_specs = df_specs[df_specs['Продукт'] == product]
@@ -61,7 +61,7 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
     
     if requirements:
         requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'Код'})
-        requirements_df['Дополнительно'] = requirements_df['Дополнительно'].fillna(0).astype(float).round(2)
+        requirements_df['Дополнительно'] = requirements_df['Дополнительно'].fillna(0).astype(float).round(0).astype(int)
         return requirements_df
     else:
         return pd.DataFrame(columns=['Код', 'Описание', 'Дополнительно'])
@@ -79,52 +79,46 @@ st.title('Планирование материальных потребност
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
 
-# Ввод целевого количества продуктов в боковой панели
-target_qty = {}
-for product in df_specs['Продукт'].unique():
-    target_qty[product] = st.sidebar.number_input(f'Целевое количество "{product}"', min_value=0, key=product)
+# Выбор продукта из выпадающего списка
+selected_product_for_target_qty = st.sidebar.selectbox('Выберите продукт для ввода целевого количества', df_specs['Продукт'].unique())
+target_qty = {selected_product_for_target_qty: st.sidebar.number_input(f'Целевое количество {selected_product_for_target_qty}', min_value=0, key=selected_product_for_target_qty)}
 
-# Список исключенных компонентов
-if 'excluded_codes' not in st.session_state:
-    st.session_state['excluded_codes'] = []
-
-# Обработка клика на строку в таблице
-def handle_click():
-    selected_codes = st.session_state['selected_codes']
-    st.session_state['excluded_codes'] = selected_codes
+# Мультивыбор для исключения компонентов
+excluded_codes = st.sidebar.multiselect('Выберите компоненты для исключения', df_specs['Код'].unique(), key='excluded_codes')
 
 # Кнопка для сброса исключенных компонентов
 if st.sidebar.button('Сбросить исключенные компоненты'):
     st.session_state['excluded_codes'] = []
 
 # Агрегация остатков комплектующих с учетом аналогов
-aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, st.session_state['excluded_codes'])
-df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(2)
+aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes)
+df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(0).astype(int)
 df_specs['Входимость в 1 изделие'] = df_specs['Количество на изделие']
-df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(2)
+df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(0).astype(int)
 
 # Фильтр для отображения агрегированных остатков от меньшего к большему
 df_specs_sorted = df_specs.sort_values(by='Агрегированные остатки')
 
 # Расчет минимальной возможности производства на основе текущих остатков
-production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks, st.session_state['excluded_codes'])
+production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes)
 
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
-styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(2)
+styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(0).astype(int)
 st.dataframe(styled_capacity_df.applymap(lambda x: '{:,.0f}'.format(x).replace(',', ' ')), use_container_width=True)
 
-# Выбор продукта для отображения агрегированных остатков в боковой панели
-selected_product = st.sidebar.selectbox('Выберите продукт для просмотра остатков комплектующих', df_specs['Продукт'].unique())
+st.subheader(f'Агрегированные остатки для {selected_product_for_target_qty}')
+
+# Применение выбор продукта для отображения агрегированных остатков из боковой панели
+selected_product = selected_product_for_target_qty
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
-st.subheader(f'Агрегированные остатки для продукта {selected_product}')
-selected_codes = st.multiselect('Исключить компоненты:', df_selected_product['Код'], default=st.session_state['excluded_codes'], key='selected_codes', on_change=handle_click)
-
 # Применение форматирования только к числовым столбцам
-numeric_columns = ['Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']
+numeric_columns = ['Агрегированные остатки', 'Комплектов']
 df_selected_product[numeric_columns] = df_selected_product[numeric_columns].applymap(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
+df_selected_product['Входимость в 1 изделие'] = df_selected_product['Входимость в 1 изделие'].apply(lambda x: '{:,.3f}'.format(x))
 
+# Отображение таблицы с агрегированными остатками
 st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
@@ -133,6 +127,6 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'float'})
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
     additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
     st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
