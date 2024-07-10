@@ -1,17 +1,19 @@
 import pandas as pd
 import streamlit as st
-from openpyxl import load_workbook
-import os
+import requests
 
 # Функция для загрузки данных с учетом метаданных
-def load_data(file_path):
-    wb = load_workbook(file_path, read_only=True, data_only=True)
-    sheet_names = wb.sheetnames  # Получаем список имён листов в Excel файле
-    df_list = {}
-    for sheet_name in sheet_names:
-        df_list[sheet_name] = pd.read_excel(file_path, sheet_name=sheet_name)
-    last_modified = os.path.getmtime(file_path)  # Получаем время последнего изменения файла
-    return df_list, last_modified  # Возвращаем словарь DataFrame и дату последнего изменения файла
+def load_data(file_url):
+    df = pd.read_excel(file_url)  # Загружаем данные из Excel
+    response = requests.head(file_url)  # Отправляем HEAD-запрос для получения метаданных
+    last_modified = response.headers['Last-Modified']  # Получаем дату последнего изменения
+    return df, last_modified
+
+# URL вашего файла Excel в GitHub (замените на реальный URL)
+file_url = 'https://github.com/iratewarrior/mrp_tool/blob/main/02_%D0%BE%D1%81%D1%82%D0%B0%D1%82%D0%BA%D0%B8_ERP.xlsx'
+
+# Загрузка данных из Excel файла и получение времени последнего обновления
+df, last_modified = load_data(file_url)
 
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
