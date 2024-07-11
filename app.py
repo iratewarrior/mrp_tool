@@ -94,7 +94,7 @@ target_qty = {selected_product_for_target_qty: st.sidebar.number_input(f'Цел�
 excluded_codes = st.sidebar.multiselect('Выберите компоненты для исключения', df_specs['Код'].unique(), key='excluded_codes')
 
 # Переключатель "С учетом / без учета упаковки"
-include_packaging = st.sidebar.checkbox('С учетом упаковки', value=True)
+include_packaging = st.sidebar.checkbox('С учетом упаковки', value=False)
 
 st.sidebar.link_button("Инструкция к инструменту", "https://drive.yadro.com/s/pSwYm4zifsqQeW9")
 
