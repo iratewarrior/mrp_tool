@@ -1,24 +1,6 @@
 import pandas as pd
 import streamlit as st
 
-
-import os
-import time
-
-path = r"02_остатки_ERP.xlsx"
-ti_m = os.path.getmtime(path)
-m_ti = time.ctime(ti_m)
-
-# Using the timestamp string to create a 
-# time object/structure
-t_obj = time.strptime(m_ti)
-
-# Transforming the time object to a timestamp 
-# of ISO 8601 format
-T_stamp = time.strftime("%Y-%m-%d %H:%M:%S", t_obj)
-
-
-
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
     analogs = df_analogs[(df_analogs['Материал.Код'] == er_code) | 
@@ -93,15 +75,6 @@ df_overuse = pd.read_excel('03_перерасход.xlsx')
 # Интерфейс пользователя в Streamlit
 st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
 st.title('Планирование материальных потребностей (MRP)')
-
-
-
-
-st.sidebar.warning(f"Файл с остатками на складах последний раз был изменен {T_stamp}", icon="⚠️")
-
-
-
-
 
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
