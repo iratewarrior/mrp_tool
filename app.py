@@ -130,3 +130,67 @@ if any(target_qty.values()):
     additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
     additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
     st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
+
+# CSS стилизация в стиле Dracula
+st.markdown("""
+    <style>
+    /* Общий стиль страницы */
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #282a36;
+        color: #f8f8f2;
+    }
+
+    /* Стиль боковой панели */
+    .sidebar .sidebar-content {
+        background-color: #44475a;
+        color: #f8f8f2;
+    }
+
+    .sidebar .sidebar-content h1, .sidebar .sidebar-content h2, .sidebar .sidebar-content h3, .sidebar .sidebar-content h4, .sidebar .sidebar-content h5, .sidebar .sidebar-content h6 {
+        color: #50fa7b;
+    }
+
+    /* Стиль заголовков */
+    .css-10trblm {
+        color: #bd93f9;
+        font-weight: bold;
+    }
+
+    .css-1v3fvcr h2 {
+        color: #ff79c6;
+    }
+
+    /* Стиль таблиц */
+    .css-1l269bu th {
+        background-color: #6272a4 !important;
+        color: white !important;
+    }
+
+    .css-1l269bu tr:nth-child(even) {
+        background-color: #44475a !important;
+    }
+
+    .css-1l269bu tr:nth-child(odd) {
+        background-color: #282a36 !important;
+    }
+
+    .css-1l269bu td {
+        border-bottom: 1px solid #6272a4 !important;
+        color: #f8f8f2 !important;
+    }
+
+    /* Стили для чисел */
+    .css-1l269bu td, .css-1l269bu th {
+        text-align: right !important;
+    }
+
+    .css-1l269bu td {
+        padding: 8px 10px !important;
+    }
+
+    .css-1l269bu th {
+        padding: 10px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
