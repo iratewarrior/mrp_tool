@@ -86,10 +86,6 @@ target_qty = {selected_product_for_target_qty: st.sidebar.number_input(f'Цел�
 # Мультивыбор для исключения компонентов
 excluded_codes = st.sidebar.multiselect('Выберите компоненты для исключения', df_specs['Код'].unique(), key='excluded_codes')
 
-# Кнопка для сброса исключенных компонентов
-if st.sidebar.button('Сбросить исключенные компоненты'):
-    st.session_state['excluded_codes'] = []
-
 # Агрегация остатков комплектующих с учетом аналогов
 aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes)
 df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(0).astype(int)
