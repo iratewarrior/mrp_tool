@@ -10,54 +10,59 @@ def find_analogs(er_code, df_analogs):
     return list(all_codes)
 
 # Функция для подсчета суммарного остатка по каждому коду и его аналогам
-def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[]):
+def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[], include_packaging=True):
     aggregated_stocks = {}
     for code in df_specs['Код']:
         if code not in excluded_codes:
-            all_codes = [code] + find_analogs(code, df_analogs)
-            total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
-            aggregated_stocks[code] = total_stock
+            if include_packaging or df_specs.loc[df_specs['Код'] == code, 'Упаковка'].values[0] != 'Да':
+                all_codes = [code] + find_analogs(code, df_analogs)
+                total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
+                aggregated_stocks[code] = total_stock
+            else:
+                aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
         else:
             aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
     return aggregated_stocks
 
 # Функция для расчета минимального количества продукта, которое можно собрать
-def calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes=[]):
+def calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes=[], include_packaging=True):
     capacity = {}
     for product in df_specs['Продукт'].unique():
         product_specs = df_specs[df_specs['Продукт'] == product]
         min_capacity = float('inf')
         for _, row in product_specs.iterrows():
             if row['Код'] not in excluded_codes:
-                analogs = find_analogs(row['Код'], df_analogs)
-                total_stock = df_stocks[df_stocks['Код'].isin([row['Код']] + analogs)]['В наличии'].sum()
-                current_capacity = total_stock // row['Количество на изделие']
-                if current_capacity < min_capacity:
-                    min_capacity = current_capacity
+                if include_packaging or row['Упаковка'] != 'Да':
+                    analogs = find_analogs(row['Код'], df_analogs)
+                    total_stock = df_stocks[df_stocks['Код'].isin([row['Код']] + analogs)]['В наличии'].sum()
+                    current_capacity = total_stock // row['Количество на изделие']
+                    if current_capacity < min_capacity:
+                        min_capacity = current_capacity
         capacity[product] = min_capacity if min_capacity != float('inf') else 0
     return capacity
 
 # Функция для расчета необходимых к дозакупке компонентов
-def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks):
+def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging=True):
     requirements = {}
     for product, qty in target_qty.items():
         if qty == 0:
             continue
         product_specs = df_specs[df_specs['Продукт'] == product]
         for _, row in product_specs.iterrows():
-            needed = qty * row['Количество на изделие']
-            excess_rate = df_overuse.loc[df_overuse['Код'] == row['Код'], 'Коэффициент брака производство']
-            needed *= (1 + excess_rate.iloc[0] if not excess_rate.empty else 1)
-            available = aggregated_stocks.get(row['Код'], 0)
-            additional_required = needed - available
-            if additional_required > 0:
-                if row['Код'] in requirements:
-                    requirements[row['Код']]['Дополнительно'] += additional_required
-                else:
-                    requirements[row['Код']] = {
-                        'Описание': row['Описание'],
-                        'Дополнительно': additional_required
-                    }
+            if include_packaging or row['Упаковка'] != 'Да':
+                needed = qty * row['Количество на изделие']
+                excess_rate = df_overuse.loc[df_overuse['Код'] == row['Код'], 'Коэффициент брака производство']
+                needed *= (1 + excess_rate.iloc[0] if not excess_rate.empty else 1)
+                available = aggregated_stocks.get(row['Код'], 0)
+                additional_required = needed - available
+                if additional_required > 0:
+                    if row['Код'] in requirements:
+                        requirements[row['Код']]['Дополнительно'] += additional_required
+                    else:
+                        requirements[row['Код']] = {
+                            'Описание': row['Описание'],
+                            'Дополнительно': additional_required
+                        }
     
     if requirements:
         requirements_df = pd.DataFrame.from_dict(requirements, orient='index').reset_index().rename(columns={'index': 'Код'})
@@ -76,8 +81,6 @@ df_overuse = pd.read_excel('03_перерасход.xlsx')
 st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
 st.title('Планирование материальных потребностей (MRP)')
 
-st.sidebar.warning('Данный инструмент призван помогать в оценивании теущих возможностей производства, учитывая текущие остатки компонентов на складах, а также в планировании дозакупки необходимых комопнентов.')
-
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
 
@@ -88,10 +91,11 @@ target_qty = {selected_product_for_target_qty: st.sidebar.number_input(f'Цел�
 # Мультивыбор для исключения компонентов
 excluded_codes = st.sidebar.multiselect('Выберите компоненты для исключения', df_specs['Код'].unique(), key='excluded_codes')
 
-st.sidebar.link_button("Инструкция к инструменту", "https://drive.yadro.com/s/pSwYm4zifsqQeW9")
+# Переключатель "С учетом / без учета упаковки"
+include_packaging = st.sidebar.checkbox('С учетом упаковки', value=True)
 
-# Агрегация остатков комплектующих с учетом аналогов
-aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes)
+# Агрегация остатков комплектующих с учетом аналогов и упаковки
+aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes, include_packaging)
 df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(0).astype(int)
 df_specs['Входимость в 1 изделие'] = df_specs['Количество на изделие']
 df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(0).astype(int)
@@ -100,7 +104,7 @@ df_specs['Комплектов'] = (df_specs['Агрегированные ос�
 df_specs_sorted = df_specs.sort_values(by='Агрегированные остатки')
 
 # Расчет минимальной возможности производства на основе текущих остатков
-production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes)
+production_capacity = calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes, include_packaging)
 
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
@@ -124,7 +128,7 @@ st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегир�
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
 if any(target_qty.values()):
     # Расчет необходимых к дозакупке компонентов
-    additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks)
+    additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
     additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
