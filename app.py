@@ -161,7 +161,7 @@ def create_analogs_dataframe(df_specs, analogs_dict):
 df_analogs_output = create_analogs_dataframe(df_specs, analogs_dict)
 
 # Кнопка для скачивания DataFrame с аналогами
-csv_analogs = df_analogs_output.to_csv(index=False, encoding='utf-8-sig')
+csv_analogs = df_analogs_output.to_csv(index=False, encoding='cp1251')
 st.download_button(label='Скачать аналоги в CSV', data=csv_analogs, file_name='аналоги.csv', mime='text/csv', key='download_analogs')
 
 # Пример отображения найденных аналогов для выбранного продукта
