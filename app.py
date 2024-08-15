@@ -10,26 +10,26 @@ def find_analogs(er_code, df_analogs):
     return list(all_codes)
 
 def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[], include_packaging=True):
+    # Ensure 'В наличии' column is numeric
+    df_stocks['В наличии'] = pd.to_numeric(df_stocks['В наличии'], errors='coerce').fillna(0)
+    
     aggregated_stocks = {}
     analogs_dict = {}
     
-    # Преобразуем столбец 'В наличии' в числовой тип, заменяя ошибки и некорректные значения на 0
-    df_stocks['В наличии'] = pd.to_numeric(df_stocks['В наличии'], errors='coerce').fillna(0)
-
     for code in df_specs['Код']:
         if code not in excluded_codes:
             if include_packaging or df_specs.loc[df_specs['Код'] == code, 'Упаковка'].values[0] != 'Да':
                 all_codes = [code] + find_analogs(code, df_analogs)
-                all_codes = list(set(all_codes))  # Убираем дублирующие коды, если они есть
-                all_codes = [c for c in all_codes if c != code]  # Исключаем основной код из списка аналогов
                 analogs_dict[code] = all_codes
-                total_stock = df_stocks[df_stocks['Код'].isin(all_codes + [code])]['В наличии'].sum()
+                total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
                 aggregated_stocks[code] = total_stock
             else:
                 aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
+                analogs_dict[code] = []
         else:
             aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
-
+            analogs_dict[code] = []
+    
     return aggregated_stocks, analogs_dict
 
 # Функция для расчета минимального количества продукта, которое можно собрать
