@@ -9,10 +9,13 @@ def find_analogs(er_code, df_analogs):
     all_codes.discard(er_code)
     return list(all_codes)
 
-# Функция для подсчета суммарного остатка по каждому коду и его аналогам
 def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[], include_packaging=True):
+    # Ensure 'В наличии' column is numeric
+    df_stocks['В наличии'] = pd.to_numeric(df_stocks['В наличии'], errors='coerce').fillna(0)
+    
     aggregated_stocks = {}
     analogs_dict = {}
+    
     for code in df_specs['Код']:
         if code not in excluded_codes:
             if include_packaging or df_specs.loc[df_specs['Код'] == code, 'Упаковка'].values[0] != 'Да':
@@ -26,6 +29,7 @@ def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[
         else:
             aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
             analogs_dict[code] = []
+    
     return aggregated_stocks, analogs_dict
 
 # Функция для расчета минимального количества продукта, которое можно собрать
@@ -165,6 +169,6 @@ csv_analogs = df_analogs_output.to_csv(index=False, encoding='cp1251').encode('c
 st.download_button(label='Скачать аналоги в CSV', data=csv_analogs, file_name='аналоги.csv', mime='text/csv', key='download_analogs')
 
 # Пример отображения найденных аналогов для выбранного продукта
-st.subheader(f'Найденные аналоги для продукта: {selected_product}')
-df_analogs_for_selected_product = df_analogs_output[df_analogs_output['Продукт'] == selected_product]
-st.dataframe(df_analogs_for_selected_product, use_container_width=True)
+# st.subheader(f'Найденные аналоги для продукта: {selected_product}')
+# df_analogs_for_selected_product = df_analogs_output[df_analogs_output['Продукт'] == selected_product]
+# st.dataframe(df_analogs_for_selected_product, use_container_width=True)
