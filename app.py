@@ -146,6 +146,6 @@ additional_requirements = calculate_additional_requirements(df_specs, df_stocks,
 
 st.subheader('Дополнительные компоненты, необходимые для производства целевого количества:')
 if not additional_requirements.empty:
-st.dataframe(additional_requirements, use_container_width=True)
+    st.dataframe(additional_requirements, use_container_width=True)
 else:
-st.write('Все необходимые компоненты имеются в достаточном количестве.')
+    st.write('Все необходимые компоненты имеются в достаточном количестве.')
