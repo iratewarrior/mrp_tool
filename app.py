@@ -144,8 +144,8 @@ st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегир�
 
 additional_requirements = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
 
-st.subheader(‘Дополнительные компоненты, необходимые для производства целевого количества:’)
+st.subheader('Дополнительные компоненты, необходимые для производства целевого количества:')
 if not additional_requirements.empty:
 st.dataframe(additional_requirements, use_container_width=True)
 else:
-st.write(‘Все необходимые компоненты имеются в достаточном количестве.’)
+st.write('Все необходимые компоненты имеются в достаточном количестве.')
