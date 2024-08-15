@@ -165,6 +165,6 @@ csv_analogs = df_analogs_output.to_csv(index=False, encoding='cp1251').encode('c
 st.download_button(label='Скачать аналоги в CSV', data=csv_analogs, file_name='аналоги.csv', mime='text/csv', key='download_analogs')
 
 # Пример отображения найденных аналогов для выбранного продукта
-# st.subheader(f'Найденные аналоги для продукта: {selected_product}')
-# df_analogs_for_selected_product = df_analogs_output[df_analogs_output['Продукт'] == selected_product]
-# st.dataframe(df_analogs_for_selected_product, use_container_width=True)
+st.subheader(f'Найденные аналоги для продукта: {selected_product}')
+df_analogs_for_selected_product = df_analogs_output[df_analogs_output['Продукт'] == selected_product]
+st.dataframe(df_analogs_for_selected_product, use_container_width=True)
