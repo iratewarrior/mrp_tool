@@ -30,7 +30,7 @@ def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[
         else:
             aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
 
-    return aggregated_stocks, 
+    return aggregated_stocks, analogs_dict
 
 # Функция для расчета минимального количества продукта, которое можно собрать
 def calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes=[], include_packaging=True):
