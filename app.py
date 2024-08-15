@@ -140,7 +140,7 @@ df_selected_product[numeric_columns] = df_selected_product[numeric_columns].appl
 df_selected_product['Входимость в 1 изделие'] = df_selected_product['Входимость в 1 изделие'].apply(lambda x: '{:,.3f}'.format(x))
 
 # Отображение таблицы с агрегированными остатками
-st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие’, ‘Комплектов’]], use_container_width=True)
+st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
 additional_requirements = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
 
