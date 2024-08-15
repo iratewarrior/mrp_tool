@@ -1,6 +1,16 @@
 import pandas as pd
 import streamlit as st
 
+# Функция для приведения данных к нужному типу
+def preprocess_data(df_stocks, df_specs):
+    # Приведение 'В наличии' к числовому типу, заполнение NaN значением 0
+    df_stocks['В наличии'] = pd.to_numeric(df_stocks['В наличии'], errors='coerce').fillna(0)
+
+    # Приведение 'Количество на изделие' в df_specs к числовому типу, заполнение NaN значением 0
+    df_specs['Количество на изделие'] = pd.to_numeric(df_specs['Количество на изделие'], errors='coerce').fillna(0)
+
+    return df_stocks, df_specs
+
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
     analogs = df_analogs[(df_analogs['Материал.Код'] == er_code) | 
@@ -77,11 +87,14 @@ df_analogs = pd.read_excel('01_аналоги.xlsx').drop_duplicates()
 df_stocks = pd.read_excel('02_остатки_ERP.xlsx')
 df_overuse = pd.read_excel('03_перерасход.xlsx')
 
+# Предварительная обработка данных
+df_stocks, df_specs = preprocess_data(df_stocks, df_specs)
+
 # Интерфейс пользователя в Streamlit
 st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
 st.title('Планирование материальных потребностей (MRP)')
 
-st.sidebar.warning('Данный инструмент призван помогать в оценивании теущих возможностей производства, учитывая текущие остатки компонентов на складах, а также в планировании дозакупки необходимых комопнентов.')
+st.sidebar.warning('Данный инструмент призван помогать в оценивании текущих возможностей производства, учитывая текущие остатки компонентов на складах, а также в планировании дозакупки необходимых компонентов.')
 
 # Боковая панель для ввода данных
 st.sidebar.title('Настройки')
@@ -96,7 +109,7 @@ excluded_codes = st.sidebar.multiselect('Выберите компоненты �
 # Переключатель "С учетом / без учета упаковки"
 include_packaging = st.sidebar.checkbox('С учетом упаковки', value=False)
 
-st.sidebar.link_button("Инструкция к инструменту", "https://drive.yadro.com/s/pSwYm4zifsqQeW9")
+st.sidebar.markdown("[Инструкция к инструменту](https://drive.yadro.com/s/pSwYm4zifsqQeW9)")
 
 # Агрегация остатков комплектующих с учетом аналогов и упаковки
 aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes, include_packaging)
@@ -117,7 +130,7 @@ st.dataframe(styled_capacity_df.applymap(lambda x: '{:,.0f}'.format(x).replace('
 
 st.subheader(f'Агрегированные остатки для {selected_product_for_target_qty}')
 
-# Применение выбор продукта для отображения агрегированных остатков из боковой панели
+# Применение выбора продукта для отображения агрегированных остатков из боковой панели
 selected_product = selected_product_for_target_qty
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
@@ -127,14 +140,12 @@ df_selected_product[numeric_columns] = df_selected_product[numeric_columns].appl
 df_selected_product['Входимость в 1 изделие'] = df_selected_product['Входимость в 1 изделие'].apply(lambda x: '{:,.3f}'.format(x))
 
 # Отображение таблицы с агрегированными остатками
-st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
+st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие’, ‘Комплектов’]], use_container_width=True)
 
-# Проверка наличия целевых количеств перед расчетом дополнительных требований
-if any(target_qty.values()):
-    # Расчет необходимых к дозакупке компонентов
-    additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
-    
-    st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
-    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
-    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
+additional_requirements = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
+
+st.subheader(‘Дополнительные компоненты, необходимые для производства целевого количества:’)
+if not additional_requirements.empty:
+st.dataframe(additional_requirements, use_container_width=True)
+else:
+st.write(‘Все необходимые компоненты имеются в достаточном количестве.’)
