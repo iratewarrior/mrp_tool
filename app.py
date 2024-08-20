@@ -1,16 +1,6 @@
 import pandas as pd
 import streamlit as st
 
-# Функция для приведения данных к нужному типу
-def preprocess_data(df_stocks, df_specs):
-    # Приведение 'В наличии' к числовому типу, заполнение NaN значением 0
-    df_stocks['В наличии'] = pd.to_numeric(df_stocks['В наличии'], errors='coerce').fillna(0)
-
-    # Приведение 'Количество на изделие' в df_specs к числовому типу, заполнение NaN значением 0
-    df_specs['Количество на изделие'] = pd.to_numeric(df_specs['Количество на изделие'], errors='coerce').fillna(0)
-
-    return df_stocks, df_specs
-
 # Функция для нахождения всех аналогов для конкретного кода
 def find_analogs(er_code, df_analogs):
     analogs = df_analogs[(df_analogs['Материал.Код'] == er_code) | 
@@ -22,17 +12,21 @@ def find_analogs(er_code, df_analogs):
 # Функция для подсчета суммарного остатка по каждому коду и его аналогам
 def calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes=[], include_packaging=True):
     aggregated_stocks = {}
+    analogs_dict = {}
     for code in df_specs['Код']:
         if code not in excluded_codes:
             if include_packaging or df_specs.loc[df_specs['Код'] == code, 'Упаковка'].values[0] != 'Да':
                 all_codes = [code] + find_analogs(code, df_analogs)
+                analogs_dict[code] = all_codes
                 total_stock = df_stocks[df_stocks['Код'].isin(all_codes)]['В наличии'].sum()
                 aggregated_stocks[code] = total_stock
             else:
                 aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
+                analogs_dict[code] = []
         else:
             aggregated_stocks[code] = 0  # Установить 0 для исключенных компонентов
-    return aggregated_stocks
+            analogs_dict[code] = []
+    return aggregated_stocks, analogs_dict
 
 # Функция для расчета минимального количества продукта, которое можно собрать
 def calculate_production_capacity(df_specs, df_analogs, df_stocks, aggregated_stocks, excluded_codes=[], include_packaging=True):
@@ -80,15 +74,13 @@ def calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overus
         return requirements_df
     else:
         return pd.DataFrame(columns=['Код', 'Описание', 'Дополнительно'])
+    
 
 # Загрузка данных
 df_specs = pd.read_excel('00_спецификации.xlsx')
 df_analogs = pd.read_excel('01_аналоги.xlsx').drop_duplicates()
 df_stocks = pd.read_excel('02_остатки_ERP.xlsx')
 df_overuse = pd.read_excel('03_перерасход.xlsx')
-
-# Предварительная обработка данных
-df_stocks, df_specs = preprocess_data(df_stocks, df_specs)
 
 # Интерфейс пользователя в Streamlit
 st.set_page_config(page_title="Планирование материальных потребностей", layout="wide")
@@ -112,7 +104,7 @@ include_packaging = st.sidebar.checkbox('С учетом упаковки', valu
 st.sidebar.markdown("[Инструкция к инструменту](https://drive.yadro.com/s/pSwYm4zifsqQeW9)")
 
 # Агрегация остатков комплектующих с учетом аналогов и упаковки
-aggregated_stocks = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes, include_packaging)
+aggregated_stocks, analogs_dict = calculate_aggregated_stock(df_specs, df_analogs, df_stocks, excluded_codes, include_packaging)
 df_specs['Агрегированные остатки'] = df_specs['Код'].map(aggregated_stocks).round(0).astype(int)
 df_specs['Входимость в 1 изделие'] = df_specs['Количество на изделие']
 df_specs['Комплектов'] = (df_specs['Агрегированные остатки'] // df_specs['Количество на изделие']).round(0).astype(int)
@@ -142,10 +134,37 @@ df_selected_product['Входимость в 1 изделие'] = df_selected_pr
 # Отображение таблицы с агрегированными остатками
 st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
-additional_requirements = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
+# Проверка наличия целевых количеств перед расчетом дополнительных требований
+if any(target_qty.values()):
+    # Расчет необходимых к дозакупке компонентов
+    additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
+    
+    st.subheader('Необходимость в дозакупке компонентов для плана производства:')
+    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
+    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
+    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
 
-st.subheader('Дополнительные компоненты, необходимые для производства целевого количества:')
-if not additional_requirements.empty:
-    st.dataframe(additional_requirements, use_container_width=True)
-else:
-    st.write('Все необходимые компоненты имеются в достаточном количестве.')
+# Функция для создания DataFrame с аналогами по каждому продукту
+def create_analogs_dataframe(df_specs, analogs_dict):
+    analogs_list = []
+    for code in df_specs['Код']:
+        if code in analogs_dict:
+            analogs = [analog for analog in analogs_dict[code] if analog != code]
+            for analog in analogs:
+                analogs_list.append({'Продукт': df_specs[df_specs['Код'] == code]['Продукт'].values[0],
+                                     'Код': code,
+                                     'Аналог': analog})
+    df_analogs_output = pd.DataFrame(analogs_list)
+    return df_analogs_output
+
+# Создание DataFrame с аналогами по каждому продукту
+df_analogs_output = create_analogs_dataframe(df_specs, analogs_dict)
+
+# Кнопка для скачивания DataFrame с аналогами
+csv_analogs = df_analogs_output.to_csv(index=False, encoding='cp1251').encode('cp1251')
+st.download_button(label='Скачать аналоги в CSV', data=csv_analogs, file_name='аналоги.csv', mime='text/csv', key='download_analogs')
+
+# Пример отображения найденных аналогов для выбранного продукта
+# st.subheader(f'Найденные аналоги для продукта: {selected_product}')
+# df_analogs_for_selected_product = df_analogs_output[df_analogs_output['Продукт'] == selected_product]
+# st.dataframe(df_analogs_for_selected_product, use_container_width=True)
