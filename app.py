@@ -136,7 +136,9 @@ st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегир�
 
 # Применение форматирования только к числовым столбцам при отображении
 numeric_columns = ['Агрегированные остатки', 'Комплектов']
-df_selected_product[numeric_columns] = df_selected_product[numeric_columns].astype(float)
+
+# Удаление форматирования и преобразование в float
+df_selected_product[numeric_columns] = df_selected_product[numeric_columns].replace({',': '', ' ': ''}, regex=True).astype(float)
 
 # Отображение таблицы с агрегированными остатками
 st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], 
@@ -152,7 +154,7 @@ if any(target_qty.values()):
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].astype(int)
+    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].replace({',': '', ' ': ''}, regex=True).astype(int)
     
     st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], 
                  use_container_width=True, 
