@@ -134,15 +134,31 @@ df_selected_product['Входимость в 1 изделие'] = df_selected_pr
 # Отображение таблицы с агрегированными остатками
 st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
+# Применение форматирования только к числовым столбцам при отображении
+numeric_columns = ['Агрегированные остатки', 'Комплектов']
+df_selected_product[numeric_columns] = df_selected_product[numeric_columns].astype(float)
+
+# Отображение таблицы с агрегированными остатками
+st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], 
+             use_container_width=True, 
+             column_config={
+                 'Агрегированные остатки': st.column_config.NumberColumn(format="{:,}"),
+                 'Комплектов': st.column_config.NumberColumn(format="{:,}")
+             })
+
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
 if any(target_qty.values()):
     # Расчет необходимых к дозакупке компонентов
     additional_requirements_df = calculate_additional_requirements(df_specs, df_stocks, df_analogs, df_overuse, target_qty, aggregated_stocks, include_packaging)
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
-    additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
-    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
-    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
+    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].astype(int)
+    
+    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], 
+                 use_container_width=True, 
+                 column_config={
+                     'Дополнительно': st.column_config.NumberColumn(format="{:,}")
+                 })
 
 # Функция для создания DataFrame с аналогами по каждому продукту
 def create_analogs_dataframe(df_specs, analogs_dict):
