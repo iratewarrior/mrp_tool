@@ -118,7 +118,7 @@ production_capacity = calculate_production_capacity(df_specs, df_analogs, df_sto
 # Минимальное количество каждого продукта, которое можно собрать
 st.subheader('Минимальное количество каждого продукта, которое можно собрать:')
 styled_capacity_df = pd.DataFrame.from_dict(production_capacity, orient='index', columns=['Минимальное количество']).round(0).astype(int)
-st.dataframe(styled_capacity_df, use_container_width=True, format={'Минимальное количество': '{:,.0f}'.format})
+st.dataframe(styled_capacity_df.applymap(lambda x: '{:,.0f}'.format(x).replace(',', ' ')), use_container_width=True)
 
 st.subheader(f'Агрегированные остатки для {selected_product_for_target_qty}')
 
@@ -126,8 +126,13 @@ st.subheader(f'Агрегированные остатки для {selected_prod
 selected_product = selected_product_for_target_qty
 df_selected_product = df_specs[df_specs['Продукт'] == selected_product]
 
+# Применение форматирования только к числовым столбцам
+numeric_columns = ['Агрегированные остатки', 'Комплектов']
+df_selected_product[numeric_columns] = df_selected_product[numeric_columns].applymap(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
+df_selected_product['Входимость в 1 изделие'] = df_selected_product['Входимость в 1 изделие'].apply(lambda x: '{:,.3f}'.format(x))
+
 # Отображение таблицы с агрегированными остатками
-st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True, format={'Агрегированные остатки': '{:,.0f}'.format, 'Комплектов': '{:,.0f}'.format, 'Входимость в 1 изделие': '{:,.3f}'.format})
+st.dataframe(df_selected_product[['Код', 'Описание', 'Агрегированные остатки', 'Входимость в 1 изделие', 'Комплектов']], use_container_width=True)
 
 # Проверка наличия целевых количеств перед расчетом дополнительных требований
 if any(target_qty.values()):
@@ -136,7 +141,8 @@ if any(target_qty.values()):
     
     st.subheader('Необходимость в дозакупке компонентов для плана производства:')
     additional_requirements_df = additional_requirements_df[additional_requirements_df['Дополнительно'] > 0].fillna(0).astype({'Дополнительно': 'int'})
-    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True, format={'Дополнительно': '{:,.0f}'.format})
+    additional_requirements_df['Дополнительно'] = additional_requirements_df['Дополнительно'].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
+    st.dataframe(additional_requirements_df[['Код', 'Описание', 'Дополнительно']], use_container_width=True)
 
 # Функция для создания DataFrame с аналогами по каждому продукту
 def create_analogs_dataframe(df_specs, analogs_dict):
@@ -157,3 +163,8 @@ df_analogs_output = create_analogs_dataframe(df_specs, analogs_dict)
 # Кнопка для скачивания DataFrame с аналогами
 csv_analogs = df_analogs_output.to_csv(index=False, encoding='cp1251').encode('cp1251')
 st.download_button(label='Скачать аналоги в CSV', data=csv_analogs, file_name='аналоги.csv', mime='text/csv', key='download_analogs')
+
+# Пример отображения найденных аналогов для выбранного продукта
+# st.subheader(f'Найденные аналоги для продукта: {selected_product}')
+# df_analogs_for_selected_product = df_analogs_output[df_analogs_output['Продукт'] == selected_product]
+# st.dataframe(df_analogs_for_selected_product, use_container_width=True)
